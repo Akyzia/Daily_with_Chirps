@@ -1,0 +1,111 @@
+// The region of interest - a planar rectangle around Australia.
+var rect = ee.Geometry.Rectangle({
+  coords: [[-74.07, 7.86], [-33.81, -33.74]],
+  geodesic: false
+});
+//Map.addLayer(rect);
+Map.centerObject(rect, 4);
+
+var dataset = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
+              .filterDate('2023-01-01', '2023-10-03')
+              .select('precipitation');
+              
+              
+var precVis = {
+  min: 1,
+  max: 14,
+   palette: ['lightblue','blue', 'cyan','MediumTurquoise','yellow', 'pink','violet','#ff00ff','DarkRed','Indigo']
+};
+Map.setCenter(-51.35118102968512,-12.755534358496496, 4);
+
+print(dataset.first());
+var med = dataset.mean().clip(rect);
+Map.addLayer(med.clip(BR), precVis, 'Precipitation (mm/d)');
+
+
+// Visualization parameters.
+var args = {
+  crs: 'EPSG:4674',  // Sirgas 2000
+  dimensions: '300',
+  region: rect,
+  min: 1,
+  max: 50,
+   palette: ['lightblue','blue', 'cyan','MediumTurquoise','yellow', 'pink','violet','#ff00ff','DarkRed','Indigo'],
+  framesPerSecond: 1,
+};
+
+// Create a video thumbnail and add it to the map.
+var thumb = ui.Thumbnail({
+  // Specifying a collection for "image" animates the sequence of images.
+  image: dataset,
+  params: args,
+  style: {
+    position: 'bottom-right',
+    width: '500px'
+  }});
+Map.add(thumb);
+
+
+// Calcula o número máximo de imagens na coleção
+var numeroMaximoDeImagens = dataset.size();
+
+// Print do número máximo de imagens
+print('Número máximo de imagens selecionadas:', numeroMaximoDeImagens);
+
+// Gera uma rampa de cores contínua
+var gradientThumbnail = ui.Thumbnail({
+  image: ee.Image.pixelLonLat().select(0),
+  params: {
+    bbox: [0, 0, 1, 0.1],  // Ajuste a largura e altura da barra de gradiente
+    dimensions: '250x30',
+    format: 'png',
+    min: 0,
+    max: 1,
+    palette: precVis.palette
+  },
+  style: {
+    padding: '0 15px'
+  }
+});
+
+// Adiciona os rótulos de valor mínimo e máximo
+var minValueLabel = ui.Label({
+  value: String(precVis.min),
+  style: {
+    margin: '0 0 0 15px'
+  }
+});
+
+var maxValueLabel = ui.Label({
+  value: String(precVis.max),
+  style: {
+    margin: '0 15px 0 0'
+  }
+});
+
+// Cria um painel para a legenda
+var legendPanel = ui.Panel({
+  widgets: [minValueLabel, gradientThumbnail, maxValueLabel],
+  layout: ui.Panel.Layout.flow('horizontal'),
+  style: {
+    position: 'bottom-left',
+    width: '360px'
+  }
+});
+
+// Adiciona a legenda ao mapa
+Map.add(legendPanel);
+
+// Adicione o título à legenda
+var legendTitle = ui.Label({
+  value: 'Legenda',
+  style: {
+     textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    width: '100%'  // Garante que o texto fica centralizado
+  }
+});
+
+
+
